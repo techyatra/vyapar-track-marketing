@@ -271,14 +271,32 @@ YouTube Shorts 2/wk — spread across the week by
 `config/posting_schedule.json`. Edit that file to change which days get
 which platforms.
 
+## Instagram visual types
+
+The model's own `visual_direction` (it's instructed to pick carousel / reel /
+single graphic per the platform rules) decides what gets built —
+`engine/content_writer.classify_visual_type` reads it back out, so the
+caption and the asset never disagree about what kind of post this is:
+
+- **single_graphic** — one branded on-brand hook/stat image
+  (`engine/graphic_generator.py`).
+- **carousel** — 3-6 slides (title → bullet points/comparison → CTA),
+  deterministically built from the already-approved caption text, never a
+  second model call, so the slides can't drift from what the caption says
+  (`engine/carousel_generator.py`).
+- **reel** — a 15-25s vertical video. A short script is written alongside
+  the caption at generate time (`content_writer.write_reel_script`, so it's
+  reviewable in the dashboard before the expensive render happens), then
+  rendered at publish time with the same HTML/CSS/JS → Playwright →
+  ffmpeg → edge-tts pipeline YouTube Shorts uses.
+
+All three get committed to `docs/generated/` and pushed so Meta's Graph API
+can fetch them from a public `raw.githubusercontent.com` URL, then posted
+via `/media` (+ `/media_publish`, or the carousel children flow) — see
+`engine/meta_poster.py`.
+
 ## Known limitations (so nothing here is oversold)
 
-- **Instagram/Facebook visuals are a single branded graphic**, not a real
-  4-6 slide carousel or a reel. `engine/graphic_generator.py` renders one
-  on-brand hook/stat image per post — enough to satisfy Instagram's "every
-  post needs media" requirement, not the richer carousel/reel formats the
-  original brief describes. Building real carousels or short-form video for
-  IG is a natural next step, not yet built.
 - **X has no posting API integration** — by your choice, to avoid the paid
   tier. Content is generated and queued; you paste it in manually.
 - **Meta posting is blocked until App Review completes** (step 4) — budget
@@ -311,16 +329,18 @@ engine/
   linkedin_poster.py        LinkedIn REST API posting + token refresh
   meta_poster.py            Instagram/Facebook Graph API posting + token exchange
   x_formatter.py            Formats X content for manual copy-paste (no posting API)
-  graphic_generator.py      Branded IG/FB graphic (HTML + Playwright)
+  graphic_generator.py      Branded IG/FB single graphic (HTML + Playwright)
+  carousel_generator.py     Branded IG/FB carousel slides, derived from the approved caption
   youtube/
     scene_renderer.py       HTML/CSS/JS scenes -> Playwright frames -> ffmpeg -> MP4 (from youtube-automator)
     voice_generator.py      edge-tts + word timing (from youtube-automator)
     thumbnail_generator.py  Thumbnail PNG via Playwright (from youtube-automator)
     youtube_uploader.py     Unattended upload via refresh token (from youtube-automator)
 templates/
-  scene.html                 Video scene template, rebranded (title/text/stat/feature/comparison/outro)
+  scene.html                 Video scene template, rebranded (title/text/stat/feature/comparison/outro) — also used for reels
   thumbnail.html             YouTube thumbnail template, rebranded
-  graphic.html                IG/FB post graphic template
+  graphic.html                IG/FB single-graphic template
+  carousel_slide.html         IG/FB carousel slide template (title/bullets/stat/comparison/cta)
 docs/
   approve/index.html          The approval dashboard (GitHub Pages + Supabase Auth)
   generated/                   Committed IG graphics land here (so they have a public raw URL)

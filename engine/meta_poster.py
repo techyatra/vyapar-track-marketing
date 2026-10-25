@@ -7,9 +7,13 @@ CODE IS READY; THIS CANNOT RUN until you complete:
    manual review, not instant — budget 1-2 weeks, see README).
 See README.md "Meta (Instagram/Facebook) setup" for the exact steps.
 
-Flow for Instagram (Graph API's two-step publish):
-  1. POST /{ig_user_id}/media       -> create a media container (image/video + caption)
-  2. POST /{ig_user_id}/media_publish -> publish that container
+Flow for Instagram:
+  Single image: POST /media (image_url+caption) -> wait -> POST /media_publish
+  Carousel:     POST /media (image_url, is_carousel_item=true) per slide
+                -> POST /media (media_type=CAROUSEL, children=[...], caption)
+                -> wait -> POST /media_publish
+  Reel:         POST /media (media_type=REELS, video_url, caption) -> wait
+                (longer — video processing) -> POST /media_publish
 Facebook Page posts are a single call to /{page_id}/feed (text) or
 /{page_id}/photos (image).
 """
@@ -21,6 +25,27 @@ import time
 import requests
 
 GRAPH_BASE = "https://graph.facebook.com/v21.0"
+
+
+def _wait_for_container(*, container_id: str, access_token: str, max_wait_seconds: int = 60, poll_seconds: int = 5) -> None:
+    """Media containers (image, carousel item, or video) process
+    asynchronously server-side before they can be published. Reels take
+    noticeably longer than images — callers pass a larger max_wait_seconds
+    for video."""
+    waited = 0
+    while waited < max_wait_seconds:
+        status = requests.get(
+            f"{GRAPH_BASE}/{container_id}",
+            params={"fields": "status_code", "access_token": access_token},
+            timeout=15,
+        ).json()
+        code = status.get("status_code")
+        if code == "FINISHED":
+            return
+        if code == "ERROR":
+            raise RuntimeError(f"Media container {container_id} failed processing: {status}")
+        time.sleep(poll_seconds)
+        waited += poll_seconds
 
 
 def publish_instagram_image_post(
@@ -40,17 +65,81 @@ def publish_instagram_image_post(
     )
     create.raise_for_status()
     container_id = create.json()["id"]
+    _wait_for_container(container_id=container_id, access_token=access_token)
 
-    # Media containers process asynchronously; poll briefly before publishing.
-    for _ in range(10):
-        status = requests.get(
-            f"{GRAPH_BASE}/{container_id}",
-            params={"fields": "status_code", "access_token": access_token},
-            timeout=15,
-        ).json()
-        if status.get("status_code") == "FINISHED":
-            break
-        time.sleep(3)
+    publish = requests.post(
+        f"{GRAPH_BASE}/{ig_user_id}/media_publish",
+        data={"creation_id": container_id, "access_token": access_token},
+        timeout=30,
+    )
+    publish.raise_for_status()
+    return publish.json()["id"]
+
+
+def publish_instagram_carousel(
+    *, access_token: str, ig_user_id: str, image_urls: list[str], caption: str, dry_run: bool = False
+) -> str | None:
+    """`image_urls` are the already-committed+pushed slide images, in the
+    publicly-reachable raw.githubusercontent.com form, in display order."""
+    if dry_run:
+        print(f"[dry-run] would publish IG carousel ({len(image_urls)} slides): {caption[:120]!r}")
+        return None
+    if not 2 <= len(image_urls) <= 10:
+        raise ValueError(f"Instagram carousels need 2-10 slides, got {len(image_urls)}")
+
+    child_ids = []
+    for url in image_urls:
+        create = requests.post(
+            f"{GRAPH_BASE}/{ig_user_id}/media",
+            data={"image_url": url, "is_carousel_item": "true", "access_token": access_token},
+            timeout=30,
+        )
+        create.raise_for_status()
+        child_id = create.json()["id"]
+        _wait_for_container(container_id=child_id, access_token=access_token)
+        child_ids.append(child_id)
+
+    create_parent = requests.post(
+        f"{GRAPH_BASE}/{ig_user_id}/media",
+        data={
+            "media_type": "CAROUSEL",
+            "children": ",".join(child_ids),
+            "caption": caption,
+            "access_token": access_token,
+        },
+        timeout=30,
+    )
+    create_parent.raise_for_status()
+    parent_id = create_parent.json()["id"]
+    _wait_for_container(container_id=parent_id, access_token=access_token)
+
+    publish = requests.post(
+        f"{GRAPH_BASE}/{ig_user_id}/media_publish",
+        data={"creation_id": parent_id, "access_token": access_token},
+        timeout=30,
+    )
+    publish.raise_for_status()
+    return publish.json()["id"]
+
+
+def publish_instagram_reel(
+    *, access_token: str, ig_user_id: str, video_url: str, caption: str, dry_run: bool = False
+) -> str | None:
+    """`video_url` must be a publicly reachable HTTPS URL to an MP4 (same
+    commit-and-push-to-this-repo approach as the image/carousel paths).
+    Video containers take noticeably longer to process than images."""
+    if dry_run:
+        print(f"[dry-run] would publish IG reel: {caption[:120]!r} video={video_url}")
+        return None
+
+    create = requests.post(
+        f"{GRAPH_BASE}/{ig_user_id}/media",
+        data={"media_type": "REELS", "video_url": video_url, "caption": caption, "access_token": access_token},
+        timeout=30,
+    )
+    create.raise_for_status()
+    container_id = create.json()["id"]
+    _wait_for_container(container_id=container_id, access_token=access_token, max_wait_seconds=300, poll_seconds=10)
 
     publish = requests.post(
         f"{GRAPH_BASE}/{ig_user_id}/media_publish",

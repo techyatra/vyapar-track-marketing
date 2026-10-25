@@ -65,6 +65,23 @@ def generate_one(db, *, platform: str, api_key: str) -> dict:
         "safety_reasoning": safety["reasoning"],
         "status": "pending_approval",
     }
+
+    if platform == "instagram":
+        # Facebook posts stay text-only (publish_facebook_text_post) in this
+        # engine, so visual_type/reel generation would be wasted work there.
+        visual_type = content_writer.classify_visual_type(post["visual_direction"])
+        row["visual_type"] = visual_type
+        if visual_type == "reel":
+            reel = content_writer.write_reel_script(
+                pillar_name=topic_data["pillar_name"],
+                topic=topic_data["topic"],
+                angle=topic_data["angle"],
+                caption_hook=post["hook"],
+                caption_body=post["body"],
+                api_key=api_key,
+            )
+            row["reel_script"] = reel["reel_script"]
+
     inserted = db.table("content_queue").insert(row).execute()
     return inserted.data[0]
 

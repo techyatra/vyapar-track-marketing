@@ -51,6 +51,13 @@ create table if not exists public.content_queue (
   yt_video_path text,
   yt_thumbnail_path text,
 
+  -- Instagram/Facebook visual asset type (engine/content_writer.classify_visual_type,
+  -- from the model's own visual_direction text). 'reel_script' is populated only
+  -- when visual_type = 'reel' (see engine/content_writer.write_reel_script).
+  visual_type text not null default 'single_graphic'
+    check (visual_type in ('single_graphic', 'carousel', 'reel')),
+  reel_script jsonb,
+
   -- Safety check (engine/safety_check.py) — the automated net before human review
   safety_safe boolean,
   safety_concerns text[],

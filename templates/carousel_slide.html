@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100vh; overflow: hidden; font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+  #stage {
+    width: 100%; height: 100%; position: relative;
+    background: radial-gradient(circle at 50% 20%, #152463 0%, #0B1120 70%);
+    color: #F4F6FF; display: flex; flex-direction: column; padding: 80px 72px;
+  }
+  #badge { font-size: 28px; font-weight: 800; color: #10B981; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 36px; }
+  #page-dot { position: absolute; top: 80px; right: 72px; font-size: 26px; color: #93A4D8; font-weight: 700; }
+  #body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+  .slide-title { font-size: 72px; font-weight: 900; line-height: 1.18; }
+  .slide-subtitle { font-size: 38px; font-weight: 500; color: #B9CBFF; margin-top: 24px; line-height: 1.4; }
+
+  .bullet-list { display: flex; flex-direction: column; gap: 32px; }
+  .bullet-item { display: flex; gap: 20px; align-items: flex-start; }
+  .bullet-dot { width: 14px; height: 14px; border-radius: 50%; background: #10B981; margin-top: 14px; flex-shrink: 0; }
+  .bullet-text { font-size: 42px; font-weight: 600; line-height: 1.35; }
+
+  .stat-value { font-size: 190px; font-weight: 900; color: #10B981; line-height: 1; }
+  .stat-label { font-size: 40px; color: #D7E0FF; margin-top: 20px; font-weight: 500; }
+
+  .compare { display: flex; gap: 28px; }
+  .compare-col { flex: 1; border-radius: 20px; padding: 32px; }
+  .compare-before { background: rgba(255,90,90,0.12); border: 2px solid #ff5a5a; }
+  .compare-after { background: rgba(16,185,129,0.14); border: 2px solid #10B981; }
+  .compare-label { font-size: 30px; font-weight: 800; margin-bottom: 14px; }
+  .compare-before .compare-label { color: #ff8a8a; }
+  .compare-after .compare-label { color: #6EE7B7; }
+  .compare-text { font-size: 30px; line-height: 1.4; }
+
+  .cta-title { font-size: 64px; font-weight: 900; line-height: 1.2; }
+  .cta-sub { font-size: 36px; color: #10B981; font-weight: 700; margin-top: 28px; }
+
+  #footer { font-size: 28px; color: #8FA0D8; font-weight: 600; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="badge">VyaparTrack</div>
+  <div id="page-dot"></div>
+  <div id="body"></div>
+  <div id="footer"></div>
+</div>
+<script>
+function esc(s) {
+  return String(s || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function setSlide(slide) {
+  document.getElementById("page-dot").textContent = slide.page_label || "";
+  document.getElementById("footer").textContent = slide.footer || "";
+  const body = document.getElementById("body");
+  const v = slide.visual || {};
+
+  if (slide.type === "title") {
+    body.innerHTML = `<div class="slide-title">${esc(v.title)}</div><div class="slide-subtitle">${esc(v.subtitle || "")}</div>`;
+  } else if (slide.type === "bullets") {
+    const items = (v.points || []).map(p => `<div class="bullet-item"><div class="bullet-dot"></div><div class="bullet-text">${esc(p)}</div></div>`).join("");
+    body.innerHTML = `<div class="slide-title" style="font-size:52px;margin-bottom:36px;">${esc(v.heading || "")}</div><div class="bullet-list">${items}</div>`;
+  } else if (slide.type === "stat") {
+    body.innerHTML = `<div class="stat-value">${esc(v.stat)}</div><div class="stat-label">${esc(v.label || "")}</div>`;
+  } else if (slide.type === "comparison") {
+    body.innerHTML = `
+      <div class="slide-title" style="font-size:52px;margin-bottom:32px;">${esc(v.heading || "")}</div>
+      <div class="compare">
+        <div class="compare-col compare-before"><div class="compare-label">${esc(v.left_label || "BEFORE")}</div><div class="compare-text">${esc(v.left_text || "")}</div></div>
+        <div class="compare-col compare-after"><div class="compare-label">${esc(v.right_label || "WITH VYAPARTRACK")}</div><div class="compare-text">${esc(v.right_text || "")}</div></div>
+      </div>`;
+  } else if (slide.type === "cta") {
+    body.innerHTML = `<div class="cta-title">${esc(v.title)}</div><div class="cta-sub">${esc(v.subtitle || "")}</div>`;
+  } else {
+    body.innerHTML = `<div class="slide-title">${esc(v.text || "")}</div>`;
+  }
+}
+window.setSlide = setSlide;
+</script>
+</body>
+</html>

@@ -131,6 +131,75 @@ def write_post(
     return data
 
 
+def classify_visual_type(visual_direction: str) -> str:
+    """The IG/FB platform rules ask the model to specify carousel/reel/graphic
+    in its own visual_direction text — this just reads that back out, so the
+    asset generator and the caption never disagree about what's being made."""
+    text = (visual_direction or "").lower()
+    if "carousel" in text:
+        return "carousel"
+    if "reel" in text:
+        return "reel"
+    return "single_graphic"
+
+
+REEL_SCENE_TYPES = """
+- "title_card": the hook, on screen for the first ~3 seconds. visual: {"title": str, "subtitle": str}
+- "feature_card": one feature, named + one-line benefit. visual: {"feature": str, "benefit": str}
+- "comparison": before/after (e.g. Tally+Excel vs VyaparTrack). visual: {"left_label": str, "left_text": str, "right_label": str, "right_text": str}
+- "text_point": one short statement. visual: {"text": str}
+- "outro_card": closing CTA. visual: {"title": str, "subtitle": str}
+"""
+
+REEL_TRIGGER_TEMPLATE = """{system_prompt}
+
+Generate a 15-25 second Instagram/Facebook Reel script for VyaparTrack —
+the same topic and angle as the caption already written for this post, so
+they tell the same story; the narration does NOT need to match the caption
+word-for-word, just the same idea.
+
+Content pillar: **{pillar_name}**
+Topic / angle: **{topic}** — {angle}
+The caption already written for this post (for context — don't repeat it
+verbatim as narration): {caption_hook} {caption_body}
+
+Rules:
+- The hook (first scene) must grab attention in under 2 seconds.
+- Write narration as natural spoken sentences, not bullet fragments.
+- Never invent numbers, pricing, or customer counts not given as input.
+- 3 to 4 scenes total, 15-25 seconds total (~2.5 words/second).
+- Use these scene types only:
+{scene_types}
+
+Respond with ONLY a JSON object, no markdown fences, no commentary:
+{{
+  "reel_script": [
+    {{"type": "title_card", "narration": "...", "visual": {{...fields for this type...}}}},
+    ...
+  ]
+}}
+"""
+
+
+def write_reel_script(
+    *, pillar_name: str, topic: str, angle: str, caption_hook: str, caption_body: str, api_key: str | None = None
+) -> dict[str, Any]:
+    system_prompt, _ = _load_prompt_blocks()
+    prompt = REEL_TRIGGER_TEMPLATE.format(
+        system_prompt=system_prompt,
+        pillar_name=pillar_name,
+        topic=topic,
+        angle=angle,
+        caption_hook=caption_hook,
+        caption_body=caption_body,
+        scene_types=REEL_SCENE_TYPES,
+    )
+    data = generate_json(prompt, required_fields=("reel_script",), api_key=api_key)
+    if not data["reel_script"]:
+        raise ValueError("Gemini returned a reel script with zero scenes")
+    return data
+
+
 if __name__ == "__main__":
     import sys
 
