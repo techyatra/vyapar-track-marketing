@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VyaparTrack Marketing — Approval Queue</title>
+<style>
+  :root { --blue: #1D4ED8; --green: #10B981; --ink: #0B1120; --bg: #F9FAFB; --border: #E5E7EB; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+  header { background: var(--ink); color: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { margin: 0; font-size: 18px; }
+  #signin, #app { max-width: 820px; margin: 24px auto; padding: 0 16px; }
+  #signin { text-align: center; padding-top: 80px; }
+  input[type=email] { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; width: 280px; font-size: 14px; }
+  button { background: var(--blue); color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 14px; cursor: pointer; }
+  button.reject { background: #DC2626; }
+  button.secondary { background: #6B7280; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .tabs { display: flex; gap: 8px; margin: 16px 0; }
+  .tabs button { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+  .tabs button.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .card .platform { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--blue); background: #EEF2FF; padding: 3px 8px; border-radius: 5px; margin-bottom: 8px; }
+  .card .pillar { font-size: 12px; color: #6B7280; margin-left: 8px; }
+  .card h3 { margin: 6px 0; font-size: 16px; }
+  .card .body { font-size: 14px; line-height: 1.5; white-space: pre-wrap; margin: 8px 0; }
+  .card .cta { font-size: 13px; font-weight: 600; color: var(--green); }
+  .card .hashtags { font-size: 12px; color: var(--blue); margin-top: 6px; }
+  .card .visual { font-size: 12px; color: #6B7280; margin-top: 8px; font-style: italic; }
+  .safety-flag { background: #FEF2F2; border: 1px solid #FEE2E2; color: #DC2626; font-size: 12px; padding: 8px; border-radius: 8px; margin: 8px 0; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .copy-box { background: #F3F4F6; border-radius: 8px; padding: 12px; font-size: 13px; white-space: pre-wrap; margin-top: 8px; }
+  .empty { text-align: center; color: #6B7280; padding: 40px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>VyaparTrack Marketing — Approval Queue</h1>
+  <button id="signOutBtn" class="secondary" style="display:none">Sign out</button>
+</header>
+
+<div id="signin">
+  <p>Sign in as the approver to review drafted posts.</p>
+  <input id="emailInput" type="email" placeholder="hello.vyapartrack@gmail.com" />
+  <button id="sendLinkBtn">Send magic link</button>
+  <p id="signinStatus" style="color:#6B7280; font-size:13px;"></p>
+  <details style="margin-top:40px; text-align:left; max-width:460px; margin-inline:auto;">
+    <summary style="cursor:pointer;">First time? Configure Supabase connection</summary>
+    <p style="font-size:13px;">Paste your Supabase project URL and anon key (Project Settings &rarr; API). These are stored only in this browser's localStorage, never sent anywhere else.</p>
+    <input id="supabaseUrlInput" placeholder="https://xxxx.supabase.co" style="width:100%; margin-bottom:8px;" />
+    <input id="supabaseAnonKeyInput" placeholder="anon public key" style="width:100%; margin-bottom:8px;" />
+    <button id="saveConfigBtn" class="secondary">Save</button>
+  </details>
+</div>
+
+<div id="app" style="display:none">
+  <div class="tabs">
+    <button data-tab="pending_approval" class="active">Pending</button>
+    <button data-tab="approved">Approved / Publishing</button>
+    <button data-tab="manual_x_ready">X — copy &amp; paste</button>
+    <button data-tab="published">Published</button>
+    <button data-tab="rejected">Rejected</button>
+  </div>
+  <div id="list"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const cfg = {
+  url: localStorage.getItem('vt_supabase_url') || '',
+  key: localStorage.getItem('vt_supabase_anon_key') || '',
+};
+document.getElementById('supabaseUrlInput').value = cfg.url;
+document.getElementById('supabaseAnonKeyInput').value = cfg.key;
+
+document.getElementById('saveConfigBtn').onclick = () => {
+  localStorage.setItem('vt_supabase_url', document.getElementById('supabaseUrlInput').value.trim());
+  localStorage.setItem('vt_supabase_anon_key', document.getElementById('supabaseAnonKeyInput').value.trim());
+  location.reload();
+};
+
+let supabase = null;
+if (cfg.url && cfg.key) {
+  supabase = window.supabase.createClient(cfg.url, cfg.key);
+}
+
+async function sendMagicLink() {
+  if (!supabase) { alert('Configure Supabase URL + anon key first.'); return; }
+  const email = document.getElementById('emailInput').value.trim();
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href } });
+  document.getElementById('signinStatus').textContent = error ? error.message : 'Check your inbox for the sign-in link.';
+}
+document.getElementById('sendLinkBtn').onclick = sendMagicLink;
+document.getElementById('signOutBtn').onclick = async () => { await supabase.auth.signOut(); location.reload(); };
+
+let currentTab = 'pending_approval';
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    loadRows();
+  };
+});
+
+function escapeHtml(s) {
+  return String(s || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+function renderCard(row) {
+  const hashtags = (row.hashtags || []).join(' ');
+  const isYoutube = row.platform === 'youtube';
+  const title = isYoutube ? row.yt_title : row.hook;
+  const bodyText = isYoutube ? row.yt_description : row.body;
+
+  let safetyHtml = '';
+  if (row.safety_safe === false) {
+    safetyHtml = `<div class="safety-flag">⚠ Automated safety check flagged this: ${escapeHtml((row.safety_concerns || []).join('; '))} — ${escapeHtml(row.safety_reasoning || '')}</div>`;
+  }
+
+  let actionsHtml = '';
+  if (row.status === 'pending_approval') {
+    actionsHtml = `
+      <div class="actions">
+        <button onclick="setStatus('${row.id}', 'approved')">Approve</button>
+        <button class="reject" onclick="setStatus('${row.id}', 'rejected')">Reject</button>
+      </div>`;
+  }
+
+  let copyBoxHtml = '';
+  if (row.status === 'manual_x_ready') {
+    copyBoxHtml = `<div class="copy-box">${escapeHtml(row.visual_direction || '')}</div>
+      <div class="actions"><button onclick="copyText(this, ${JSON.stringify(row.visual_direction || '')})">Copy for X</button></div>`;
+  }
+
+  return `
+    <div class="card">
+      <span class="platform">${escapeHtml(row.platform)}</span>
+      <span class="pillar">${escapeHtml(row.pillar_id)}</span>
+      ${safetyHtml}
+      <h3>${escapeHtml(title || row.topic)}</h3>
+      <div class="body">${escapeHtml(bodyText)}</div>
+      ${row.cta ? `<div class="cta">${escapeHtml(row.cta)}</div>` : ''}
+      ${hashtags ? `<div class="hashtags">${escapeHtml(hashtags)}</div>` : ''}
+      ${row.visual_direction && row.status !== 'manual_x_ready' ? `<div class="visual">🎨 ${escapeHtml(row.visual_direction)}</div>` : ''}
+      ${copyBoxHtml}
+      ${actionsHtml}
+    </div>`;
+}
+
+async function setStatus(id, status) {
+  const { error } = await supabase.from('content_queue').update({
+    status, reviewed_at: new Date().toISOString(),
+  }).eq('id', id);
+  if (error) { alert(error.message); return; }
+  loadRows();
+}
+window.setStatus = setStatus;
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text);
+  btn.textContent = 'Copied!';
+  setTimeout(() => (btn.textContent = 'Copy for X'), 1500);
+}
+window.copyText = copyText;
+
+async function loadRows() {
+  const { data, error } = await supabase
+    .from('content_queue')
+    .select('*')
+    .eq('status', currentTab)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  const list = document.getElementById('list');
+  if (error) { list.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; return; }
+  if (!data.length) { list.innerHTML = '<div class="empty">Nothing here right now.</div>'; return; }
+  list.innerHTML = data.map(renderCard).join('');
+}
+
+async function init() {
+  if (!supabase) return;
+  const { data } = await supabase.auth.getSession();
+  if (data.session) {
+    document.getElementById('signin').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('signOutBtn').style.display = 'inline-block';
+    loadRows();
+  }
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (session) location.reload();
+  });
+}
+init();
+</script>
+</body>
+</html>

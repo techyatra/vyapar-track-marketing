@@ -1,0 +1,19 @@
+{
+  "brand": {
+    "name": "VyaparTrack",
+    "handle": "vyapartrack",
+    "primary_color": "#1D4ED8",
+    "primary_color_dark": "#1640B0",
+    "accent_color": "#10B981",
+    "ink_color": "#0B1120"
+  },
+  "review_policy": "queue_for_approval",
+  "youtube": {
+    "fps": 30,
+    "resolution": { "width": 1080, "height": 1920 },
+    "voice": { "en": "en-IN-NeerjaNeural" },
+    "privacy_status_on_upload": "public",
+    "category_id": "22"
+  },
+  "x_posting_mode": "manual_queue"
+}

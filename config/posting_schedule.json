@@ -1,0 +1,10 @@
+{
+  "_comment": "Weekday -> platforms to generate a draft for that day (0=Mon..6=Sun, IST). Totals match config/content_pillars.json cadence_per_week: linkedin 3, x 6, instagram 5, facebook 4, youtube 2.",
+  "0": ["linkedin", "x", "instagram"],
+  "1": ["x", "facebook"],
+  "2": ["linkedin", "x", "instagram", "youtube"],
+  "3": ["x", "instagram", "facebook"],
+  "4": ["linkedin", "x", "instagram"],
+  "5": ["x", "facebook", "youtube"],
+  "6": ["instagram", "facebook"]
+}

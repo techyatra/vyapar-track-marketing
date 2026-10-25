@@ -1,0 +1,74 @@
+{
+  "pillars": [
+    {
+      "id": "pain_solution",
+      "name": "Pain → Solution",
+      "weight": 0.30,
+      "brief": "Name a distributor pain (stock mismatch, GST panic, slow billing, multi-firm chaos) and show how VyaparTrack solves it."
+    },
+    {
+      "id": "feature_spotlight",
+      "name": "Feature spotlight",
+      "weight": 0.20,
+      "brief": "One feature, shown as a benefit. (Multi-firm switch, auto GST split, FIFO costing, GRN→auto sell price, credit notes, GSTR-3B summary, bulk import.)"
+    },
+    {
+      "id": "educational",
+      "name": "Educational / how-to",
+      "weight": 0.20,
+      "brief": "GST basics, inventory best practices, margin tips, expiry-loss control. Builds trust, highly shareable/saveable."
+    },
+    {
+      "id": "social_proof",
+      "name": "Social proof / use-case",
+      "weight": 0.10,
+      "brief": "\"A distributor running 3 firms can…\" (generic scenarios ONLY unless real testimonial data is supplied)."
+    },
+    {
+      "id": "seasonal",
+      "name": "Seasonal / festive / filing-cycle",
+      "weight": 0.10,
+      "brief": "Month-end, GST filing dates, Diwali/Holi stocking season, financial year-end, new-year planning."
+    },
+    {
+      "id": "behind_the_scenes",
+      "name": "Behind-the-scenes / brand",
+      "weight": 0.10,
+      "brief": "Product updates, team, \"built in India for Indian distributors\", roadmap teasers."
+    }
+  ],
+  "feature_pool": [
+    "Multi-firm switch from one login",
+    "Automatic CGST/SGST vs IGST split",
+    "HSN on every line + Bill of Supply for exempt goods",
+    "Input Tax Credit (ITC) tracking",
+    "Net-GST payable widget",
+    "GSTR-3B style summary",
+    "Stock never goes negative",
+    "FIFO batch costing",
+    "Expiry/batch awareness for FMCG stock",
+    "Buy price captured at GRN, cascading margins to sell price",
+    "Price locked at order time",
+    "Purchase order → multi-godown GRN → stock → sales order → GST bill flow",
+    "Returns / credit notes",
+    "Bulk import for onboarding existing data",
+    "PDF bills & estimates",
+    "Indian number formatting (₹1,23,456)"
+  ],
+  "cadence_per_week": {
+    "note": "As specified in the original brief; tune later from analytics.",
+    "linkedin": 3,
+    "x": 6,
+    "instagram": 4.5,
+    "facebook": 3.5,
+    "youtube_shorts": 2,
+    "youtube_long_form": 1
+  },
+  "posting_windows_ist": {
+    "linkedin": "Tue-Thu, 8-10 AM & 5-7 PM",
+    "x": "Weekdays 9-11 AM & 6-9 PM",
+    "instagram": "12-1 PM & 7-9 PM, weekends too",
+    "facebook": "12-1 PM & 7-9 PM, weekends too",
+    "youtube": "Fri/Sat evening"
+  }
+}

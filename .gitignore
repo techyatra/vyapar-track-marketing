@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+config/settings.json
+output/
+*.log
+client_secret*.json
+.DS_Store

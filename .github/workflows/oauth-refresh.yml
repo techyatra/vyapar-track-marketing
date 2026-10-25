@@ -1,0 +1,76 @@
+name: Refresh OAuth tokens
+
+on:
+  schedule:
+    # 1st of every month at midnight UTC — a safety net; LinkedIn access tokens
+    # last 60 days so this comfortably beats expiry even if a run is missed.
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write   # needed to update GitHub Secrets via gh CLI
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run token refresh
+        id: refresh
+        env:
+          LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+          LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_REFRESH_TOKEN: ${{ secrets.LINKEDIN_REFRESH_TOKEN }}
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
+        run: |
+          OUTPUT=$(python scripts/oauth_refresh.py)
+          echo "$OUTPUT"
+
+          NEW_LI_ACCESS=$(echo "$OUTPUT" | grep '##NEW_LINKEDIN_ACCESS_TOKEN=' | cut -d'=' -f2-)
+          NEW_LI_REFRESH=$(echo "$OUTPUT" | grep '##NEW_LINKEDIN_REFRESH_TOKEN=' | cut -d'=' -f2-)
+          NEW_META_TOKEN=$(echo "$OUTPUT" | grep '##NEW_META_PAGE_ACCESS_TOKEN=' | cut -d'=' -f2-)
+
+          echo "::add-mask::$NEW_LI_ACCESS"
+          echo "::add-mask::$NEW_LI_REFRESH"
+          echo "::add-mask::$NEW_META_TOKEN"
+
+          echo "new_li_access=$NEW_LI_ACCESS" >> $GITHUB_OUTPUT
+          echo "new_li_refresh=$NEW_LI_REFRESH" >> $GITHUB_OUTPUT
+          echo "new_meta_token=$NEW_META_TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Update GitHub Secrets with new tokens
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ steps.refresh.outputs.new_li_access }}" ]; then
+            echo "${{ steps.refresh.outputs.new_li_access }}" | gh secret set LINKEDIN_ACCESS_TOKEN
+          fi
+          if [ -n "${{ steps.refresh.outputs.new_li_refresh }}" ]; then
+            echo "${{ steps.refresh.outputs.new_li_refresh }}" | gh secret set LINKEDIN_REFRESH_TOKEN
+          fi
+          if [ -n "${{ steps.refresh.outputs.new_meta_token }}" ]; then
+            echo "${{ steps.refresh.outputs.new_meta_token }}" | gh secret set META_PAGE_ACCESS_TOKEN
+          fi
+          echo "GitHub Secrets updated."
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Token refresh failed. Tokens may expire soon."
+          echo "LinkedIn: redo scripts/linkedin_oauth_setup.py if LINKEDIN_REFRESH_TOKEN itself has expired."
+          echo "Meta: re-generate a page access token from Meta for Developers > Graph API Explorer."

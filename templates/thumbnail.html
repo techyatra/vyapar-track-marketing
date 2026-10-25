@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+  #stage {
+    width: 1280px; height: 720px; position: relative;
+    background: radial-gradient(circle at 70% 30%, #152463 0%, #0B1120 70%);
+    display: flex; align-items: center; padding: 0 80px;
+  }
+  #badge {
+    position: absolute; top: 48px; left: 64px;
+    font-size: 32px; font-weight: 800; color: #10B981;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  #title {
+    font-size: 92px; font-weight: 900; color: #F4F6FF; line-height: 1.1;
+    max-width: 760px; text-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  #title .accent { color: #10B981; }
+  #corner {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 420px;
+    background: linear-gradient(135deg, rgba(29,78,216,0.25), transparent 60%);
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="corner"></div>
+    <div id="badge">VyaparTrack</div>
+    <div id="title"></div>
+  </div>
+<script>
+function setThumbnail(data) {
+  document.getElementById("title").innerHTML = (data.text || "")
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+window.setThumbnail = setThumbnail;
+</script>
+</body>
+</html>
