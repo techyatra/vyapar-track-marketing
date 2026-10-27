@@ -12,7 +12,7 @@ and `techyatra/youtube-automator`:
 | Piece | Tool | Cost |
 |---|---|---|
 | Scheduling | GitHub Actions cron | Free |
-| State (drafts, approvals, tokens, analytics) | Supabase (Postgres) | Free tier |
+| State (drafts, approvals, tokens, analytics) | Supabase (Postgres) — shared project with Linkedin-Automator, `vt_`-prefixed tables | Free tier |
 | Content writing + compliance check | Gemini API | Free tier |
 | YouTube Short voice | `edge-tts` | Free, no API key |
 | YouTube Short visuals | HTML/CSS/JS rendered via Playwright + ffmpeg | Free |
@@ -38,10 +38,10 @@ scripts/run_scheduled_generation.py   (daily-generate.yml, picks platforms from 
   -> engine/topic_picker.py           (Gemini: weighted content pillar + topic, avoiding repeats)
   -> engine/content_writer.py         (Gemini: writes the post using prompts/system_prompt.md + platform_rules.md)
   -> engine/safety_check.py           (Gemini: compliance check — fabricated data, tax-advice-as-fact, overclaiming)
-  -> Supabase content_queue, status='pending_approval'
+  -> Supabase vt_content_queue, status='pending_approval'
 
 docs/approve/index.html               (you review here — GitHub Pages + Supabase Auth, restricted to hello.vyapartrack@gmail.com)
-  -> Approve / Reject updates content_queue.status
+  -> Approve / Reject updates vt_content_queue.status
 
 main_publish.py                       (publish-approved.yml, every 2 hours)
   -> linkedin, facebook: posted immediately via their APIs
@@ -70,46 +70,76 @@ playwright install chromium   # only needed for local testing of the YouTube/gra
 2. Get API Key → Create API Key. No credit card required.
 3. Save it — you'll add it as a GitHub Secret in step 7.
 
-### 2. Supabase project (free tier)
+### 2. Supabase — reusing Linkedin-Automator's project
 
-1. Go to https://supabase.com, sign up / sign in as hello.vyapartrack@gmail.com
-2. New project → name it `vyapar-track-marketing`, pick a region close to India
-   (ap-south-1 / Mumbai if offered), set a database password (save it — you
-   won't need it day-to-day, but keep it somewhere safe).
-3. Once provisioned: SQL Editor → paste the entire contents of
-   `supabase/schema.sql` → Run.
-4. Project Settings → API: copy the **Project URL**, the **anon public** key,
-   and the **service_role** key (click to reveal). You'll need all three.
-5. Authentication → Providers → make sure **Email** is enabled (it is by
-   default). Authentication → URL Configuration → add your GitHub Pages URL
-   (see step 6) to **Redirect URLs** once you know it, e.g.
+By your choice, this project shares a Supabase project with
+`techyatra/Linkedin-Automator` instead of getting its own — faster setup,
+one fewer thing to pay for if the free tier is ever outgrown. Every table
+this repo creates is prefixed `vt_` (see `supabase/schema.sql`) specifically
+so it can't collide with or accidentally read Linkedin-Automator's own
+tables (`topics_li`, `user_automation_settings`, `tokens_li`, etc.) sitting
+in the same database.
+
+1. Get that project's URL + service_role key. Two places to check:
+   - **Azure Portal** → Function App `linkedin-automator-daily-post` →
+     Configuration → Application settings → `SUPABASE_URL` /
+     `SUPABASE_SERVICE_KEY`.
+   - Or **supabase.com dashboard** directly, if you know which project it
+     is → Project Settings → API → **Project URL** and **service_role** key
+     (click to reveal). Also copy the **anon public** key from the same page
+     — the approval dashboard needs it.
+2. SQL Editor → paste the entire contents of `supabase/schema.sql` → Run.
+   This only touches the new `vt_*` tables; it never modifies
+   Linkedin-Automator's existing ones.
+3. Authentication → Providers → confirm **Email** is enabled (default).
+   Authentication → URL Configuration → add your GitHub Pages URL (see
+   step 8) to **Redirect URLs** once you know it, e.g.
    `https://techyatra.github.io/vyapar-track-marketing/approve/`.
 
-### 3. LinkedIn (same pattern as techyatra/Linkedin-Automator)
+### 3. LinkedIn — reusing Linkedin-Automator's app + identity
 
-1. Go to https://www.linkedin.com/developers/apps, sign in as
-   hello.vyapartrack@gmail.com (or use a personal profile you control — the
-   app posts as whichever profile authorizes it).
-2. Create app → link it to a LinkedIn Company Page (required by LinkedIn
-   even if you post to a personal profile) → request the **Share on
-   LinkedIn** and **Sign In with LinkedIn using OpenID Connect** products
-   (self-serve, approved instantly).
-3. Auth tab → add redirect URL: `http://localhost:8765/callback`
-4. Note the **Client ID** and **Client Secret** from the Auth tab.
-5. Run locally:
-   ```bash
-   python scripts/linkedin_oauth_setup.py <client_id> <client_secret>
-   ```
-   This opens a browser, you approve as hello.vyapartrack@gmail.com, and it
-   prints `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_REFRESH_TOKEN` (if your app has
-   the refresh-token product — see the script's own note if not),
-   `LINKEDIN_PERSON_URN`.
-6. To post as a Company Page instead of a personal profile: find your
-   organization's URN (`urn:li:organization:{id}`, visible in the Page
-   admin URL) and set it as `LINKEDIN_ORG_URN`.
-7. **Token lifetime:** access tokens last 60 days. `oauth-refresh.yml` runs
-   monthly and rotates it automatically if your app has refresh-token
-   access; otherwise it'll fail loudly and you re-run step 5.
+By your choice, VyaparTrack marketing posts go out under the **same
+LinkedIn app and the same authorized identity** Linkedin-Automator already
+posts dev content to — meaning **both automations will post to the same
+LinkedIn profile/page**, interleaved. Worth knowing before you turn the
+cadence up.
+
+1. Find the existing token. Check, in order:
+   - **Azure Portal** → Function App `linkedin-automator-daily-post` →
+     Configuration — if `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` /
+     `LINKEDIN_ACCESS_TOKEN` / `LINKEDIN_PERSON_URN` are set there (the
+     "legacy single-user" path), copy them directly.
+   - If not there, Linkedin-Automator is running **multi-tenant**: the
+     working token lives in the shared Supabase project's
+     `user_automation_settings` table, in the row for your own user
+     (`linkedin_refresh_token`, plus whatever access-token column precedes
+     the `linkedin_refresh_token` migration in `scripts/linkedin-token-refresh.sql`).
+     Pull the values from that row instead.
+2. If the access token looks stale or you can't find a working one, you can
+   still mint a fresh one **against the same LinkedIn Developer app**
+   (reuse its existing Client ID/Secret from
+   https://www.linkedin.com/developers/apps instead of creating a new app):
+   - Auth tab of that existing app → add redirect URL:
+     `http://localhost:8765/callback`
+   - Run locally:
+     ```bash
+     python scripts/linkedin_oauth_setup.py <existing_client_id> <existing_client_secret>
+     ```
+     Sign in as whichever profile/page should keep posting (the same one
+     Linkedin-Automator already uses, to stay consistent with the shared-
+     identity choice) — prints `LINKEDIN_ACCESS_TOKEN`,
+     `LINKEDIN_REFRESH_TOKEN` (if the app has the refresh-token product),
+     `LINKEDIN_PERSON_URN`.
+3. Posting as a Company Page instead of a personal profile: set
+   `LINKEDIN_ORG_URN` (`urn:li:organization:{id}`, visible in the Page
+   admin URL) — whichever Linkedin-Automator already uses, to match.
+4. **Token lifetime:** access tokens last 60 days. `oauth-refresh.yml` here
+   runs monthly and rotates this repo's copy automatically if the app has
+   refresh-token access; it does NOT update Linkedin-Automator's own copy of
+   the same token (Azure settings or Supabase), so if that automation also
+   rotates it independently, re-sync the two periodically — or point both
+   automations at Supabase's `user_automation_settings` as the single
+   source of truth instead of separate copies, if that's ever worth doing.
 
 ### 4. Meta — Instagram + Facebook (the real steps, not instant)
 
@@ -225,7 +255,7 @@ the platforms it's actually posting to.)
 2. It'll be live at `https://techyatra.github.io/vyapar-track-marketing/approve/`
    within a minute or two.
 3. Open it, expand "Configure Supabase connection", paste your Supabase
-   **Project URL** and **anon public** key (from step 2.4) — these aren't
+   **Project URL** and **anon public** key (from step 2) — these aren't
    secret (RLS in `supabase/schema.sql` restricts all access to
    `hello.vyapartrack@gmail.com`), stored only in your browser's
    localStorage.
@@ -345,7 +375,7 @@ docs/
   approve/index.html          The approval dashboard (GitHub Pages + Supabase Auth)
   generated/                   Committed IG graphics land here (so they have a public raw URL)
 supabase/
-  schema.sql                   Full schema: topics, content_queue, oauth_tokens, post_analytics, automation_runs
+  schema.sql                   Full schema: vt_topics, vt_content_queue, vt_oauth_tokens, vt_post_analytics, vt_automation_runs
 scripts/
   youtube_oauth_setup.py        Run once locally to mint the YouTube refresh token
   linkedin_oauth_setup.py       Run once locally to mint the LinkedIn access/refresh token

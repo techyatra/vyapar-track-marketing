@@ -26,7 +26,7 @@ TEXT_PLATFORMS = ("linkedin", "instagram", "facebook", "x")
 
 def _recent_topics(db, platform: str, limit: int = 20) -> list[str]:
     rows = (
-        db.table("content_queue")
+        db.table("vt_content_queue")
         .select("topic")
         .eq("platform", platform)
         .order("created_at", desc=True)
@@ -82,7 +82,7 @@ def generate_one(db, *, platform: str, api_key: str) -> dict:
             )
             row["reel_script"] = reel["reel_script"]
 
-    inserted = db.table("content_queue").insert(row).execute()
+    inserted = db.table("vt_content_queue").insert(row).execute()
     return inserted.data[0]
 
 

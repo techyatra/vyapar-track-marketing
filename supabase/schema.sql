@@ -1,17 +1,22 @@
 -- VyaparTrack Marketing Automation — Supabase schema
--- Run once in the Supabase SQL Editor for a new project, then reload the
--- PostgREST schema cache (Database -> API -> "Reload schema").
+-- Run once in the Supabase SQL Editor, then reload the PostgREST schema
+-- cache (Database -> API -> "Reload schema").
 --
--- Mirrors the proven techyatra/Linkedin-Automator pattern: Supabase holds all
--- durable state (topics, drafts, approval queue, schedules, analytics, OAuth
--- tokens); GitHub Actions jobs are stateless and read/write through here.
+-- This project SHARES a Supabase project with techyatra/Linkedin-Automator
+-- (its multi-tenant tables include topics_li, user_automation_settings,
+-- tokens_li, etc. — see that repo's scripts/*.sql). Every table here is
+-- prefixed vt_ (VyaparTrack) so nothing collides with that product's own
+-- tables in the same database, and it's always obvious which rows belong to
+-- which automation when browsing the Table Editor.
+--
+-- GitHub Actions jobs are stateless and read/write through here.
 
 create extension if not exists "pgcrypto";
 
 -- ---------------------------------------------------------------------------
--- 1. topics: candidate topics discovered or hand-entered, queued for writing
+-- 1. vt_topics: candidate topics discovered or hand-entered, queued for writing
 -- ---------------------------------------------------------------------------
-create table if not exists public.topics (
+create table if not exists public.vt_topics (
   id uuid primary key default gen_random_uuid(),
   platform text not null check (platform in ('linkedin', 'instagram', 'facebook', 'x', 'youtube')),
   pillar_id text not null,
@@ -22,13 +27,13 @@ create table if not exists public.topics (
   used_at timestamptz
 );
 
-create index if not exists topics_platform_status_idx on public.topics (platform, status);
+create index if not exists vt_topics_platform_status_idx on public.vt_topics (platform, status);
 
 -- ---------------------------------------------------------------------------
--- 2. content_queue: every generated post, from draft through published.
+-- 2. vt_content_queue: every generated post, from draft through published.
 --    This is the single table the approval dashboard reads/writes.
 -- ---------------------------------------------------------------------------
-create table if not exists public.content_queue (
+create table if not exists public.vt_content_queue (
   id uuid primary key default gen_random_uuid(),
   platform text not null check (platform in ('linkedin', 'instagram', 'facebook', 'x', 'youtube')),
   pillar_id text not null,
@@ -79,13 +84,15 @@ create table if not exists public.content_queue (
   created_at timestamptz not null default now()
 );
 
-create index if not exists content_queue_status_idx on public.content_queue (status);
-create index if not exists content_queue_platform_idx on public.content_queue (platform, created_at desc);
+create index if not exists vt_content_queue_status_idx on public.vt_content_queue (status);
+create index if not exists vt_content_queue_platform_idx on public.vt_content_queue (platform, created_at desc);
 
 -- ---------------------------------------------------------------------------
--- 3. oauth_tokens: per-platform refresh tokens, refreshed by oauth-refresh.yml
+-- 3. vt_oauth_tokens: per-platform refresh tokens, refreshed by oauth-refresh.yml
+--    (This project's own tokens — distinct from Linkedin-Automator's
+--    per-user tokens_li / user_automation_settings tables.)
 -- ---------------------------------------------------------------------------
-create table if not exists public.oauth_tokens (
+create table if not exists public.vt_oauth_tokens (
   platform text primary key check (platform in ('linkedin', 'youtube', 'meta')),
   access_token text,
   refresh_token text,
@@ -95,11 +102,11 @@ create table if not exists public.oauth_tokens (
 );
 
 -- ---------------------------------------------------------------------------
--- 4. post_analytics: engagement snapshots pulled by fetch-analytics.yml
+-- 4. vt_post_analytics: engagement snapshots pulled by fetch-analytics.yml
 -- ---------------------------------------------------------------------------
-create table if not exists public.post_analytics (
+create table if not exists public.vt_post_analytics (
   id uuid primary key default gen_random_uuid(),
-  content_queue_id uuid references public.content_queue(id) on delete cascade,
+  vt_content_queue_id uuid references public.vt_content_queue(id) on delete cascade,
   platform text not null,
   impressions integer,
   likes integer,
@@ -109,12 +116,12 @@ create table if not exists public.post_analytics (
   fetched_at timestamptz not null default now()
 );
 
-create index if not exists post_analytics_content_idx on public.post_analytics (content_queue_id);
+create index if not exists vt_post_analytics_content_idx on public.vt_post_analytics (vt_content_queue_id);
 
 -- ---------------------------------------------------------------------------
--- 5. automation_runs: one row per GitHub Actions job run, for debugging
+-- 5. vt_automation_runs: one row per GitHub Actions job run, for debugging
 -- ---------------------------------------------------------------------------
-create table if not exists public.automation_runs (
+create table if not exists public.vt_automation_runs (
   id uuid primary key default gen_random_uuid(),
   job_name text not null,
   status text not null check (status in ('success', 'failure')),
@@ -128,30 +135,32 @@ create table if not exists public.automation_runs (
 -- GitHub Actions jobs authenticate with the service_role key, which bypasses
 -- RLS entirely — so these policies only matter for the browser-based approval
 -- dashboard, which uses the anon key. Lock it down to the single approver
--- email set as APPROVER_EMAIL, authenticated via Supabase email OTP/magic link.
+-- email, authenticated via Supabase email OTP/magic link. This also keeps
+-- the dashboard from ever being able to read/write Linkedin-Automator's own
+-- tables in this shared project — it only ever queries vt_* tables.
 
-alter table public.content_queue enable row level security;
-alter table public.topics enable row level security;
-alter table public.post_analytics enable row level security;
+alter table public.vt_content_queue enable row level security;
+alter table public.vt_topics enable row level security;
+alter table public.vt_post_analytics enable row level security;
 
-drop policy if exists "approver_full_access" on public.content_queue;
-create policy "approver_full_access" on public.content_queue
+drop policy if exists "approver_full_access" on public.vt_content_queue;
+create policy "approver_full_access" on public.vt_content_queue
   for all
   using (auth.jwt() ->> 'email' = 'hello.vyapartrack@gmail.com')
   with check (auth.jwt() ->> 'email' = 'hello.vyapartrack@gmail.com');
 
-drop policy if exists "approver_read_topics" on public.topics;
-create policy "approver_read_topics" on public.topics
+drop policy if exists "approver_read_topics" on public.vt_topics;
+create policy "approver_read_topics" on public.vt_topics
   for select
   using (auth.jwt() ->> 'email' = 'hello.vyapartrack@gmail.com');
 
-drop policy if exists "approver_read_analytics" on public.post_analytics;
-create policy "approver_read_analytics" on public.post_analytics
+drop policy if exists "approver_read_analytics" on public.vt_post_analytics;
+create policy "approver_read_analytics" on public.vt_post_analytics
   for select
   using (auth.jwt() ->> 'email' = 'hello.vyapartrack@gmail.com');
 
--- oauth_tokens and automation_runs are never touched by the browser — no
--- policies needed; only the service_role key (used by GitHub Actions) can
+-- vt_oauth_tokens and vt_automation_runs are never touched by the browser —
+-- no policies needed; only the service_role key (used by GitHub Actions) can
 -- read/write them once RLS is enabled with zero policies for anon/authenticated.
-alter table public.oauth_tokens enable row level security;
-alter table public.automation_runs enable row level security;
+alter table public.vt_oauth_tokens enable row level security;
+alter table public.vt_automation_runs enable row level security;

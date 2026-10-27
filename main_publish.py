@@ -224,7 +224,7 @@ def main() -> None:
     args = parser.parse_args()
 
     db = get_client()
-    rows = db.table("content_queue").select("*").eq("status", "approved").execute().data
+    rows = db.table("vt_content_queue").select("*").eq("status", "approved").execute().data
 
     for row in rows:
         platform = row["platform"]
@@ -240,7 +240,7 @@ def main() -> None:
                 result = publish_youtube(row, dry_run=args.dry_run)
             elif platform == "x":
                 formatted = x_formatter.validate_and_format(hook=row["hook"], body=row["body"], cta=row["cta"])
-                db.table("content_queue").update(
+                db.table("vt_content_queue").update(
                     {"status": "manual_x_ready", "visual_direction": formatted["copy_paste_text"]}
                 ).eq("id", row["id"]).execute()
                 print(f"  -> flagged manual_x_ready ({formatted['mode']})")
@@ -251,7 +251,7 @@ def main() -> None:
             if args.dry_run:
                 continue
 
-            db.table("content_queue").update(
+            db.table("vt_content_queue").update(
                 {
                     "status": "published",
                     "published_at": datetime.now(timezone.utc).isoformat(),
@@ -264,7 +264,7 @@ def main() -> None:
         except Exception as exc:  # noqa: BLE001 — one bad row must not block the rest of the run
             print(f"  -> FAILED: {exc}")
             if not args.dry_run:
-                db.table("content_queue").update({"status": "failed", "reviewer_note": str(exc)[:500]}).eq(
+                db.table("vt_content_queue").update({"status": "failed", "reviewer_note": str(exc)[:500]}).eq(
                     "id", row["id"]
                 ).execute()
 

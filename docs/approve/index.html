@@ -150,7 +150,7 @@ function renderCard(row) {
 }
 
 async function setStatus(id, status) {
-  const { error } = await supabase.from('content_queue').update({
+  const { error } = await supabase.from('vt_content_queue').update({
     status, reviewed_at: new Date().toISOString(),
   }).eq('id', id);
   if (error) { alert(error.message); return; }
@@ -167,7 +167,7 @@ window.copyText = copyText;
 
 async function loadRows() {
   const { data, error } = await supabase
-    .from('content_queue')
+    .from('vt_content_queue')
     .select('*')
     .eq('status', currentTab)
     .order('created_at', { ascending: false })

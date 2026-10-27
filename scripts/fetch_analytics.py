@@ -47,7 +47,7 @@ def fetch_meta_metrics(post_id: str, access_token: str) -> dict:
 def main() -> None:
     db = get_client()
     rows = (
-        db.table("content_queue")
+        db.table("vt_content_queue")
         .select("id, platform, platform_post_id")
         .eq("status", "published")
         .not_.is_("platform_post_id", "null")
@@ -64,8 +64,8 @@ def main() -> None:
             else:
                 continue  # YouTube analytics need a separate Data API call; X has no API access
 
-            db.table("post_analytics").insert(
-                {"content_queue_id": row["id"], "platform": row["platform"], **metrics}
+            db.table("vt_post_analytics").insert(
+                {"vt_content_queue_id": row["id"], "platform": row["platform"], **metrics}
             ).execute()
             print(f"[analytics] {row['platform']} {row['id']}: {metrics}")
         except Exception as exc:  # noqa: BLE001

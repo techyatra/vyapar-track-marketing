@@ -25,7 +25,7 @@ def main() -> None:
     db = get_client()
 
     recent_rows = (
-        db.table("content_queue")
+        db.table("vt_content_queue")
         .select("topic")
         .eq("platform", "youtube")
         .order("created_at", desc=True)
@@ -61,7 +61,7 @@ def main() -> None:
         "safety_reasoning": safety["reasoning"],
         "status": "pending_approval",
     }
-    inserted = db.table("content_queue").insert(row).execute()
+    inserted = db.table("vt_content_queue").insert(row).execute()
     print(f"[queued] youtube: {row['topic']} (safe={row['safety_safe']}) id={inserted.data[0]['id']}")
 
 
