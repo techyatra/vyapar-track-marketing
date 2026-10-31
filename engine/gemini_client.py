@@ -1,22 +1,30 @@
 """Thin shared wrapper around the Gemini free tier, used by every content
-and safety-check call. Same model/approach as techyatra/youtube-automator."""
+and safety-check call.
+
+Uses the current `google-genai` SDK, not the deprecated
+`google-generativeai` package techyatra/youtube-automator was built against
+— that package stopped receiving updates, and its pinned model
+(gemini-2.0-flash) has since been retired by Google outright (confirmed by
+a live 404 while building this), not just deprecated. A "set up once"
+system can't be left depending on a dead package."""
 
 from __future__ import annotations
 
 import json
 import os
 
+DEFAULT_MODEL = "gemini-3.8-flash"
 
-def generate(prompt: str, *, api_key: str | None = None, model: str = "gemini-2.0-flash") -> str:
-    import google.generativeai as genai
+
+def generate(prompt: str, *, api_key: str | None = None, model: str = DEFAULT_MODEL) -> str:
+    from google import genai
 
     api_key = api_key or os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
 
-    genai.configure(api_key=api_key)
-    gen_model = genai.GenerativeModel(model)
-    response = gen_model.generate_content(prompt)
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(model=model, contents=prompt)
     return response.text
 
 
