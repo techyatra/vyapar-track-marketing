@@ -2,46 +2,83 @@
 <html>
 <head>
 <meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100vh; overflow: hidden; font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+  html, body { width: 100%; height: 100vh; overflow: hidden; font-family: 'Inter', -apple-system, "Segoe UI", Arial, sans-serif; }
+
   #stage {
     width: 100%; height: 100%; position: relative;
-    background: radial-gradient(circle at 50% 25%, #152463 0%, #0B1120 70%);
-    color: #F4F6FF;
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    text-align: center; padding: 90px;
+    background: #0B1120;
+    color: #F4F6FF; display: flex; flex-direction: column;
   }
-  #badge {
-    position: absolute; top: 56px; left: 56px;
-    font-size: 30px; font-weight: 800; color: #10B981;
-    letter-spacing: 2px; text-transform: uppercase;
+
+  /* Decorative background: soft color blobs + faint dot grid, not a flat gradient */
+  #bg-glow-1 { position: absolute; top: -10%; right: -15%; width: 60%; height: 45%; border-radius: 50%; background: radial-gradient(circle, rgba(29,78,216,0.55) 0%, rgba(29,78,216,0) 70%); filter: blur(10px); }
+  #bg-glow-2 { position: absolute; bottom: -15%; left: -10%; width: 55%; height: 40%; border-radius: 50%; background: radial-gradient(circle, rgba(16,185,129,0.35) 0%, rgba(16,185,129,0) 70%); filter: blur(10px); }
+  #bg-dots {
+    position: absolute; inset: 0; opacity: 0.35;
+    background-image: radial-gradient(rgba(255,255,255,0.14) 1.5px, transparent 1.5px);
+    background-size: 28px 28px;
   }
-  #hook { font-size: 70px; font-weight: 800; line-height: 1.25; }
-  #stat { font-size: 170px; font-weight: 900; color: #10B981; line-height: 1; }
-  #label { font-size: 38px; margin-top: 20px; color: #D7E0FF; }
-  #footer {
-    position: absolute; bottom: 56px; left: 0; right: 0;
-    text-align: center; font-size: 28px; color: #B9CBFF; font-weight: 600;
+
+  #content-wrap { position: relative; flex: 1; display: flex; flex-direction: column; padding: 64px 72px 0; }
+
+  /* Real VyaparTrack logo lockup: gradient badge + wordmark, matching landing/index.html */
+  .vt-logo { display: flex; align-items: center; gap: 14px; }
+  .vt-badge {
+    width: 52px; height: 52px; border-radius: 13px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1D4ED8, #10B981);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: 'Sora', sans-serif; font-weight: 800; font-size: 20px;
+    box-shadow: 0 8px 24px rgba(29, 78, 216, 0.4);
   }
+  .vt-wordmark { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 30px; color: #F4F6FF; letter-spacing: -0.01em; }
+
+  #body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  #hook { font-family: 'Sora', sans-serif; font-size: 66px; font-weight: 800; line-height: 1.22; max-width: 920px; }
+  #stat { font-family: 'Sora', sans-serif; font-size: 170px; font-weight: 900; color: #34D399; line-height: 1; text-shadow: 0 0 40px rgba(16,185,129,0.35); }
+  #label { font-size: 36px; margin-top: 20px; color: #CBD5F5; font-weight: 500; }
+
+  /* Footer bar: contrasting solid strip, like a real ad unit's CTA band, not floating text */
+  #footer-bar {
+    position: relative; margin-top: auto;
+    background: linear-gradient(90deg, #1D4ED8, #10B981);
+    padding: 28px 72px; display: flex; align-items: center; justify-content: space-between;
+  }
+  #footer-text { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 700; color: #ffffff; }
+  #footer-sub { font-size: 22px; font-weight: 600; color: rgba(255,255,255,0.85); }
 </style>
 </head>
 <body>
   <div id="stage">
-    <div id="badge">VyaparTrack</div>
-    <div id="content"></div>
-    <div id="footer">Free 6-month trial &middot; No card required</div>
+    <div id="bg-dots"></div>
+    <div id="bg-glow-1"></div>
+    <div id="bg-glow-2"></div>
+    <div id="content-wrap">
+      <div class="vt-logo">
+        <span class="vt-badge">VT</span>
+        <span class="vt-wordmark">VyaparTrack</span>
+      </div>
+      <div id="body"></div>
+    </div>
+    <div id="footer-bar">
+      <span id="footer-text">Free for 6 months</span>
+      <span id="footer-sub">No card required</span>
+    </div>
   </div>
 <script>
 function esc(s) {
   return String(s || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 function setGraphic(data) {
-  const content = document.getElementById("content");
+  const body = document.getElementById("body");
   if (data.stat) {
-    content.innerHTML = `<div id="stat">${esc(data.stat)}</div><div id="label">${esc(data.label || data.hook || "")}</div>`;
+    body.innerHTML = `<div id="stat">${esc(data.stat)}</div><div id="label">${esc(data.label || data.hook || "")}</div>`;
   } else {
-    content.innerHTML = `<div id="hook">${esc(data.hook || "")}</div>`;
+    body.innerHTML = `<div id="hook">${esc(data.hook || "")}</div>`;
   }
 }
 window.setGraphic = setGraphic;

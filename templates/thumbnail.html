@@ -2,34 +2,50 @@
 <html>
 <head>
 <meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800;900&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 1280px; height: 720px; overflow: hidden; font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; font-family: 'Inter', -apple-system, "Segoe UI", Arial, sans-serif; }
   #stage {
     width: 1280px; height: 720px; position: relative;
-    background: radial-gradient(circle at 70% 30%, #152463 0%, #0B1120 70%);
+    background: #0B1120;
     display: flex; align-items: center; padding: 0 80px;
   }
-  #badge {
-    position: absolute; top: 48px; left: 64px;
-    font-size: 32px; font-weight: 800; color: #10B981;
-    letter-spacing: 2px; text-transform: uppercase;
+  #bg-glow { position: absolute; top: -20%; right: -10%; width: 55%; height: 90%; border-radius: 50%; background: radial-gradient(circle, rgba(29,78,216,0.5) 0%, rgba(29,78,216,0) 70%); filter: blur(8px); }
+  #bg-dots {
+    position: absolute; inset: 0; opacity: 0.28;
+    background-image: radial-gradient(rgba(255,255,255,0.16) 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
   }
+
+  #brand-row { position: absolute; top: 44px; left: 64px; display: flex; align-items: center; gap: 12px; z-index: 5; }
+  .vt-badge {
+    width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1D4ED8, #10B981);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: 'Sora', sans-serif; font-weight: 800; font-size: 17px;
+    box-shadow: 0 6px 18px rgba(29, 78, 216, 0.45);
+  }
+  .vt-wordmark { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 26px; color: #F4F6FF; }
+
   #title {
-    font-size: 92px; font-weight: 900; color: #F4F6FF; line-height: 1.1;
+    position: relative; font-family: 'Sora', sans-serif;
+    font-size: 88px; font-weight: 900; color: #F4F6FF; line-height: 1.1;
     max-width: 760px; text-shadow: 0 8px 30px rgba(0,0,0,0.5);
   }
-  #title .accent { color: #10B981; }
-  #corner {
-    position: absolute; right: 0; top: 0; bottom: 0; width: 420px;
-    background: linear-gradient(135deg, rgba(29,78,216,0.25), transparent 60%);
-  }
+  #title .accent { color: #34D399; }
 </style>
 </head>
 <body>
   <div id="stage">
-    <div id="corner"></div>
-    <div id="badge">VyaparTrack</div>
+    <div id="bg-dots"></div>
+    <div id="bg-glow"></div>
+    <div id="brand-row">
+      <span class="vt-badge">VT</span>
+      <span class="vt-wordmark">VyaparTrack</span>
+    </div>
     <div id="title"></div>
   </div>
 <script>
