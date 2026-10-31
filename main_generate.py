@@ -97,13 +97,20 @@ def main() -> None:
     platforms = [args.platform] if args.platform else TEXT_PLATFORMS
 
     results = []
+    failures = []
     for platform in platforms:
         for _ in range(args.count):
-            row = generate_one(db, platform=platform, api_key=api_key)
-            print(f"[queued] {platform}: {row['topic']} (safe={row['safety_safe']}) id={row['id']}")
-            results.append(row)
+            try:
+                row = generate_one(db, platform=platform, api_key=api_key)
+                print(f"[queued] {platform}: {row['topic']} (safe={row['safety_safe']}) id={row['id']}")
+                results.append(row)
+            except Exception as exc:  # noqa: BLE001 — one platform's failure must not block the rest
+                print(f"[FAILED] {platform}: {exc}")
+                failures.append({"platform": platform, "error": str(exc)})
 
-    print(json.dumps({"queued": len(results)}, indent=2))
+    print(json.dumps({"queued": len(results), "failed": failures}, indent=2))
+    if failures:
+        sys.exit(1)  # surface in the Actions run, but only after every platform was attempted
 
 
 if __name__ == "__main__":

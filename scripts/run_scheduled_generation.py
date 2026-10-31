@@ -38,12 +38,21 @@ def main() -> None:
     api_key = os.environ["GEMINI_API_KEY"]
     db = get_client()
 
+    failures = []
     for platform in platforms:
-        if platform == "youtube":
-            main_youtube_short.main()
-        else:
-            row = main_generate.generate_one(db, platform=platform, api_key=api_key)
-            print(f"[queued] {platform}: {row['topic']} (safe={row['safety_safe']}) id={row['id']}")
+        try:
+            if platform == "youtube":
+                main_youtube_short.main()
+            else:
+                row = main_generate.generate_one(db, platform=platform, api_key=api_key)
+                print(f"[queued] {platform}: {row['topic']} (safe={row['safety_safe']}) id={row['id']}")
+        except Exception as exc:  # noqa: BLE001 — one platform's failure must not block the rest
+            print(f"[FAILED] {platform}: {exc}")
+            failures.append(platform)
+
+    if failures:
+        print(f"Failed platforms (will retry next scheduled run): {failures}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
