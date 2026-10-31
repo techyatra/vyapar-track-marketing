@@ -5,6 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="vt_icons.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100vh; overflow: hidden; font-family: 'Inter', -apple-system, "Segoe UI", Arial, sans-serif; }
@@ -42,10 +43,18 @@
   .slide-title { font-family: 'Sora', sans-serif; font-size: 66px; font-weight: 800; line-height: 1.2; }
   .slide-subtitle { font-size: 34px; font-weight: 500; color: #B9CBFF; margin-top: 22px; line-height: 1.4; }
 
-  .bullet-list { display: flex; flex-direction: column; gap: 26px; }
-  .bullet-item { display: flex; gap: 18px; align-items: flex-start; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px 26px; }
-  .bullet-dot { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, #1D4ED8, #10B981); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 800; font-family: 'Sora', sans-serif; }
-  .bullet-text { font-size: 36px; font-weight: 600; line-height: 1.3; }
+  .vt-icon-chip {
+    width: 70px; height: 70px; border-radius: 18px; margin-bottom: 28px;
+    background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.14);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .vt-icon-chip svg { width: 36px; height: 36px; color: #34D399; }
+
+  .bullet-list { display: flex; flex-direction: column; gap: 24px; }
+  .bullet-item { display: flex; gap: 20px; align-items: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px 26px; }
+  .bullet-icon { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #1D4ED8, #10B981); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .bullet-icon svg { width: 26px; height: 26px; color: #fff; }
+  .bullet-text { font-size: 34px; font-weight: 600; line-height: 1.3; }
 
   .stat-value { font-family: 'Sora', sans-serif; font-size: 180px; font-weight: 900; color: #34D399; line-height: 1; text-shadow: 0 0 40px rgba(16,185,129,0.35); }
   .stat-label { font-size: 38px; color: #D7E0FF; margin-top: 18px; font-weight: 500; }
@@ -54,7 +63,8 @@
   .compare-col { flex: 1; border-radius: 18px; padding: 30px; }
   .compare-before { background: rgba(239,68,68,0.1); border: 1.5px solid rgba(239,68,68,0.5); }
   .compare-after { background: rgba(16,185,129,0.12); border: 1.5px solid #10B981; }
-  .compare-label { font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800; margin-bottom: 12px; }
+  .compare-label { font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .compare-label svg { width: 24px; height: 24px; }
   .compare-before .compare-label { color: #FCA5A5; }
   .compare-after .compare-label { color: #6EE7B7; }
   .compare-text { font-size: 28px; line-height: 1.4; }
@@ -95,21 +105,21 @@ function setSlide(slide) {
   const v = slide.visual || {};
 
   if (slide.type === "title") {
-    body.innerHTML = `<div class="slide-title">${esc(v.title)}</div><div class="slide-subtitle">${esc(v.subtitle || "")}</div>`;
+    body.innerHTML = `<div class="vt-icon-chip">${vtPickIcon(v.title + " " + (v.subtitle || ""))}</div><div class="slide-title">${esc(v.title)}</div><div class="slide-subtitle">${esc(v.subtitle || "")}</div>`;
   } else if (slide.type === "bullets") {
-    const items = (v.points || []).map((p, i) => `<div class="bullet-item"><div class="bullet-dot">${i + 1}</div><div class="bullet-text">${esc(p)}</div></div>`).join("");
+    const items = (v.points || []).map((p) => `<div class="bullet-item"><div class="bullet-icon">${vtPickIcon(p)}</div><div class="bullet-text">${esc(p)}</div></div>`).join("");
     body.innerHTML = `<div class="slide-title" style="font-size:48px;margin-bottom:32px;">${esc(v.heading || "")}</div><div class="bullet-list">${items}</div>`;
   } else if (slide.type === "stat") {
-    body.innerHTML = `<div class="stat-value">${esc(v.stat)}</div><div class="stat-label">${esc(v.label || "")}</div>`;
+    body.innerHTML = `<div class="vt-icon-chip">${VT_ICONS.chart}</div><div class="stat-value">${esc(v.stat)}</div><div class="stat-label">${esc(v.label || "")}</div>`;
   } else if (slide.type === "comparison") {
     body.innerHTML = `
       <div class="slide-title" style="font-size:48px;margin-bottom:28px;">${esc(v.heading || "")}</div>
       <div class="compare">
-        <div class="compare-col compare-before"><div class="compare-label">${esc(v.left_label || "BEFORE")}</div><div class="compare-text">${esc(v.left_text || "")}</div></div>
-        <div class="compare-col compare-after"><div class="compare-label">${esc(v.right_label || "WITH VYAPARTRACK")}</div><div class="compare-text">${esc(v.right_text || "")}</div></div>
+        <div class="compare-col compare-before"><div class="compare-label">${VT_ICONS.cross}${esc(v.left_label || "BEFORE")}</div><div class="compare-text">${esc(v.left_text || "")}</div></div>
+        <div class="compare-col compare-after"><div class="compare-label">${VT_ICONS.check}${esc(v.right_label || "WITH VYAPARTRACK")}</div><div class="compare-text">${esc(v.right_text || "")}</div></div>
       </div>`;
   } else if (slide.type === "cta") {
-    body.innerHTML = `<div class="cta-title">${esc(v.title)}</div><div class="cta-sub">${esc(v.subtitle || "")}</div>`;
+    body.innerHTML = `<div class="vt-icon-chip">${VT_ICONS.spark}</div><div class="cta-title">${esc(v.title)}</div><div class="cta-sub">${esc(v.subtitle || "")}</div>`;
   } else {
     body.innerHTML = `<div class="slide-title">${esc(v.text || "")}</div>`;
   }
