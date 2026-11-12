@@ -1,9 +1,11 @@
 name: Fetch post analytics
 
 on:
-  schedule:
-    # 11:00 PM IST = 17:30 UTC
-    - cron: '30 17 * * *'
+  # Scheduled runs paused until GEMINI_API_KEY/SUPABASE_URL/SUPABASE_SERVICE_KEY
+  # are added as repo secrets -- re-enable by uncommenting below.
+  # schedule:
+  #   # 11:00 PM IST = 17:30 UTC
+  #   - cron: '30 17 * * *'
   workflow_dispatch:
 
 jobs:

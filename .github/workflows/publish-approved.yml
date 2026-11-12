@@ -1,9 +1,11 @@
 name: Publish approved posts
 
 on:
-  schedule:
-    # Every 2 hours — picks up whatever you've approved in the dashboard since last run
-    - cron: '0 */2 * * *'
+  # Scheduled runs paused until GEMINI_API_KEY/SUPABASE_URL/SUPABASE_SERVICE_KEY
+  # are added as repo secrets -- re-enable by uncommenting below.
+  # schedule:
+  #   # Every 2 hours — picks up whatever you've approved in the dashboard since last run
+  #   - cron: '0 */2 * * *'
   workflow_dispatch:
     inputs:
       dry_run:

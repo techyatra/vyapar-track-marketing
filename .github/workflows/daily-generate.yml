@@ -1,9 +1,11 @@
 name: Generate daily content drafts
 
 on:
-  schedule:
-    # 6:00 AM IST = 00:30 UTC
-    - cron: '30 0 * * *'
+  # Scheduled runs paused until GEMINI_API_KEY/SUPABASE_URL/SUPABASE_SERVICE_KEY
+  # are added as repo secrets -- re-enable by uncommenting below.
+  # schedule:
+  #   # 6:00 AM IST = 00:30 UTC
+  #   - cron: '30 0 * * *'
   workflow_dispatch:
     inputs:
       weekday:
